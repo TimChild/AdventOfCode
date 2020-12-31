@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Set, List, Tuple, Dict, Union
 import pandas as pd
+from functools import reduce
 from dataclasses import dataclass, field
 from itertools import product
 import timeit
@@ -36,7 +37,14 @@ class Constellation:
     def iterate(self):
         self.extend_dims()
         temp = np.pad(self.state, pad_width=1)
-        sums = np.sum(np.array([temp[s] for s in self.slices]), axis=0)
+        arr_gen = (temp[s] for s in self.slices)
+
+        if self.ndim <= 5:  # Faster, but uses too much memory for dim = 6 (took 1.4s d=5, d=6 wasn't finishing)
+            sums = np.sum(np.array([temp[s] for s in self.slices]), axis=0)
+        else:  # using reduce so that higher dimensions can be done for fun of it (slower for low dim)
+            # (took 1m45s d=6, 2.7s d=5)
+            sums = reduce(lambda a, b: np.sum(np.array([a, b]), axis=0), arr_gen)
+
         actives = np.where(
             np.logical_or(
                 np.logical_and(
